@@ -448,8 +448,9 @@
 <div class="wrap">
   <h2 class="title">✿ 四柱推命　命式表 ✿</h2>
 
-  <!-- 印刷ボタン（top-barの外に独立） -->
-  <div id="print-btn-wrap" style="text-align:right;margin-bottom:6px;">
+  <!-- 保存・印刷ボタン（top-barの外に独立） -->
+  <div id="print-btn-wrap" style="text-align:right;margin-bottom:6px;display:flex;justify-content:flex-end;gap:8px;">
+    <button class="btn btn-save" onclick="saveAsFile()" style="flex-shrink:0;">&#128190; 保存</button>
     <button class="btn btn-print" onclick="window.print()" style="flex-shrink:0;">&#128424; 印刷</button>
   </div>
   <!-- Top bar -->
@@ -1484,10 +1485,6 @@ function calcDaunTokusei(daunKan, daunShi, meishikiShis, meishikiKans, nikan){
   if(nich&&kanchiMap[nich])kanchiShi.add(kanchiMap[nich]);
   if(daunShi&&kanchiShi.has(daunShi)) stars.push('咸池');
 
-  // 空亡
-  const kuuboShis=getKuuboShi();
-  if(daunShi&&kuuboShis.includes(daunShi)) stars.push('空亡');
-
   // ===== 桃花殺（大運・年運） =====
   // 子午卯酉の4つが命式＋大運/年運で揃い、大運/年運が絡む場合
   const tokkaShi = ['子','午','卯','酉'];
@@ -2373,6 +2370,56 @@ function resetAll(){
   setGender('m');
   updateAll();
 }
+// ===== 保存（入力値込みのHTMLをダウンロード） =====
+function saveAsFile(){
+  // 1. DOMをクローン
+  const clone = document.documentElement.cloneNode(true);
+
+  // 2. input[type=text / date / time] の value を attribute に書き込む
+  const origInputs  = document.querySelectorAll('input');
+  const cloneInputs = clone.querySelectorAll('input');
+  origInputs.forEach((el, i) => {
+    cloneInputs[i].setAttribute('value', el.value);
+    if(el.type === 'checkbox' || el.type === 'radio'){
+      if(el.checked) cloneInputs[i].setAttribute('checked','');
+      else cloneInputs[i].removeAttribute('checked');
+    }
+  });
+
+  // 3. select の selected を attribute に書き込む
+  const origSelects  = document.querySelectorAll('select');
+  const cloneSelects = clone.querySelectorAll('select');
+  origSelects.forEach((el, i) => {
+    const cloneOpts = cloneSelects[i].querySelectorAll('option');
+    cloneSelects[i].querySelectorAll('option').forEach(o => o.removeAttribute('selected'));
+    const idx = el.selectedIndex;
+    if(idx >= 0) cloneOpts[idx].setAttribute('selected','');
+  });
+
+  // 4. textarea の value を textContent に書き込む
+  const origTAs  = document.querySelectorAll('textarea');
+  const cloneTAs = clone.querySelectorAll('textarea');
+  origTAs.forEach((el, i) => { cloneTAs[i].textContent = el.value; });
+
+  // 5. ダウンロード
+  const name = document.getElementById('name-input').value.trim();
+  const bd   = document.getElementById('birthday').value;
+  let fname = '命式表';
+  if(name) fname += '_' + name;
+  if(bd)   fname += '_' + bd.replace(/-/g,'');
+  fname += '.html';
+
+  const html = '<!DOCTYPE html>\n' + clone.outerHTML;
+  const blob = new Blob([html], {type: 'text/html;charset=utf-8'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = fname;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+  showToast('保存しました：' + fname);
+}
+
 function showToast(msg){
   const t=document.getElementById('toast');
   t.textContent=msg;t.classList.add('show');
